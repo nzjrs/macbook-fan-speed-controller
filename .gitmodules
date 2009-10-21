@@ -1,0 +1,3 @@
+[submodule "pid"]
+	path = pid
+	url = git://github.com/nzjrs/pid.git
