@@ -14,9 +14,9 @@ static int          get_number_of_files_in_path(const char *fstr, int startidx);
 #define CPUTEMP_PATH    "/sys/devices/platform/"
 #define APPLESMC_PATH   "/sys/devices/platform/applesmc.768/"
 #define MIN_FAN         2000
-#define MAX_FAN         6000
+#define MAX_FAN         7000
 
-#define SETPOINT        57
+#define SETPOINT        55
 #define DT              1.0
 
 int main (int argc, char **argv)
