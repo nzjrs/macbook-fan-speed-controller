@@ -90,6 +90,7 @@ get_temperature(unsigned int nsensors)
             g_error_free(err);
         }
 
+        g_free(tempstring);
         g_free(path);
     }
 
