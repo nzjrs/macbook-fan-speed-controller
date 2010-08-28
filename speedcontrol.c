@@ -11,6 +11,7 @@ static unsigned int get_temperature(unsigned int nsensors);
 static unsigned int set_fans(unsigned int rpm, unsigned int nfans);
 static int          get_number_of_files_in_path(const char *fstr, int startidx);
 
+#define LOGFILE_PATH    "/var/log/macbookfanspeed"
 #define CPUTEMP_PATH    "/sys/devices/platform/"
 #define APPLESMC_PATH   "/sys/devices/platform/applesmc.768/"
 #define MIN_FAN         2000
@@ -18,6 +19,14 @@ static int          get_number_of_files_in_path(const char *fstr, int startidx);
 
 #define SETPOINT        55
 #define DT              1.0
+
+static void no_debug_logger (const gchar *log_domain,
+                             GLogLevelFlags log_level,
+                             const gchar *message,
+                             gpointer user_data)
+{
+    ;
+}
 
 int main (int argc, char **argv)
 {
@@ -34,8 +43,13 @@ int main (int argc, char **argv)
     /* clamp output to safe fan range */
     pid_enable_feature(&pid, PID_OUTPUT_SAT_MIN, MIN_FAN);
     pid_enable_feature(&pid, PID_OUTPUT_SAT_MAX, MAX_FAN);
-    pid_enable_feature(&pid, PID_DEBUG, 0);
     pid_set(&pid, SETPOINT);
+
+    /* look for --quiet */
+    if (argc > 1 && argv[1] && g_strcmp0(argv[1], "--quiet") == 0)
+        g_log_set_handler (NULL, G_LOG_LEVEL_DEBUG, no_debug_logger, NULL);
+    else
+        pid_enable_feature(&pid, PID_DEBUG, 0);
 
     /* get number of fans, numbering starts at 1 */
     nfans = get_number_of_files_in_path(APPLESMC_PATH"fan%d_manual", 1);
@@ -46,12 +60,18 @@ int main (int argc, char **argv)
 
     while ( nfans && nsensors ) {
         float t,rpm;
+        char *log;
 
         g_usleep(G_USEC_PER_SEC * DT);
 
         t  = get_temperature(nsensors) * 1e-3;
         rpm = pid_calculate(&pid, t, DT);
         set_fans(rpm, nfans);
+
+        log = g_strdup_printf("%.1f",t);
+        if (!g_file_set_contents(LOGFILE_PATH,log,-1,NULL))
+            g_warning("ERROR: Failed to write to logfile "LOGFILE_PATH);
+        g_free(log);
 
         g_debug("T: %f RPM: %f", t, rpm);
     }
@@ -65,10 +85,10 @@ write_sys_file(const gchar *path, const gchar *str)
     FILE *f = fopen(path, "w");
     if (f) {
         if ( fprintf(f, "%s", str) != strlen(str) )
-            g_debug("ERROR WRITING %s TO: %s", str, path);
+            g_critical("ERROR WRITING %s TO: %s", str, path);
         fclose(f);
     } else {
-        g_debug("ERROR OPENING: %s", path);
+        g_critical("ERROR OPENING: %s", path);
     }
 }
 
@@ -86,7 +106,7 @@ get_temperature(unsigned int nsensors)
         if ( g_file_get_contents(path, &tempstring, NULL, &err) ) {
             maxtemp = MAX( maxtemp, g_ascii_strtoull(tempstring, NULL, 10) );
         } else {
-            g_debug("ERROR READING TEMP SENSOR: %s", err->message);
+            g_critical("ERROR READING TEMP SENSOR: %s", err->message);
             g_error_free(err);
         }
 

@@ -1,0 +1,36 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          macbookfanspeed
+# Required-Start:    $all
+# Required-Stop:     $all
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: starts macbookfanspeed
+# Description:       starts macbookfanspeed using start-stop-daemon
+### END INIT INFO
+
+NAME=macbookfanspeed
+DAEMON=/usr/local/bin/$NAME
+DAEMON_ARGS="--quiet"
+PIDFILE=/var/run/$NAME.pid
+
+[ -x "$DAEMON" ] || exit 0
+
+case "$1" in
+  start)
+    /sbin/start-stop-daemon --start --quiet --pidfile $PIDFILE \
+        --user root --group root \
+        --background --make-pidfile \
+        --exec $DAEMON $DAEMON_ARGS
+    ;;
+  stop)
+    /sbin/start-stop-daemon --stop --pidfile $PIDFILE --name=$NAME
+    ;;
+  *)
+    echo "Usage: /etc/init.d/$NAME {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0
